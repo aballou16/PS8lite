@@ -91,8 +91,8 @@ training <- training %>%
 
 Questions to ask yourself or discuss with your peers
 
-1. Why didn't I apply the same change to the `test` set?
-1. If I transformed the outcome variable now, what will I have to make sure to do later on?
+1. **Why didn't I apply the same change to the `test` set?:** Because `test` doesn't have a SalePrice variable to change - it is our unknown Y
+1. **If I transformed the outcome variable now, what will I have to make sure to do later on?** You will have to make sure to convert it back from logit space to positive space
 
 
 ## Select only numerical predictors
@@ -144,6 +144,7 @@ training <- training %>%
     MasVnrArea = ifelse(is.na(MasVnrArea), mean(MasVnrArea, na.rm = TRUE), MasVnrArea),
     GarageYrBlt = ifelse(is.na(GarageYrBlt), mean(GarageYrBlt, na.rm = TRUE), GarageYrBlt)
   )
+
 test <- test %>% 
   mutate(
     LotFrontage = ifelse(is.na(LotFrontage), mean(LotFrontage, na.rm = TRUE), LotFrontage),
@@ -166,13 +167,7 @@ test <- test %>%
 We use the same model formula as the `model_formula_full` from PS7. In other words, we are using the same $p$ = 36 numerical predictors.
 
 ```{r}
-model_formula <- "logSalePrice ~ MSSubClass + LotFrontage + LotArea + 
-OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + 
-BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + FirstFlrSF + SecondFlrSF + LowQualFinSF + 
-GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + 
-KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + 
-WoodDeckSF + OpenPorchSF + EnclosedPorch + ThirdSsnPorch + ScreenPorch + PoolArea + 
-MiscVal + MoSold + YrSold" %>% 
+model_formula <- "logSalePrice ~ MSSubClass + LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 +BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + FirstFlrSF + SecondFlrSF + LowQualFinSF + GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + WoodDeckSF + OpenPorchSF + EnclosedPorch + ThirdSsnPorch + ScreenPorch + PoolArea +MiscVal + MoSold + YrSold" %>% 
   as.formula()
 ```
 
@@ -187,7 +182,18 @@ MiscVal + MoSold + YrSold" %>%
 Fit one Random Forest model `model_rf` using any approach you want.
 
 ```{r}
-
+# Fit random forest:
+model_rf <- randomForest(
+  # Model formula
+  form = model_formula,
+  # Training data
+  data = training, 
+  # At each node of tree, number of features/predictor variables to randomly
+  # choose from for splitting:
+  mtry = 2,
+  # Number of bagged (bootstrap aggregated) trees in your forest:
+  ntree = 100 
+)
 ```
 
 
@@ -201,9 +207,20 @@ Fit one Random Forest model `model_rf` using any approach you want.
 Using `model_rf` make predictions and submit to Kaggle.
 
 ```{r}
+#predict on test
+test_predict <- test %>% 
+  mutate(
+    logSalePrice_hat_rf = predict(object = model_rf, newdata = test),
+    SalePrice_hat_rf = exp(logSalePrice_hat_rf) -1
+  )
 
+#create Kaggle submission
+submission_rf <- test_predict %>%
+  mutate(SalePrice = SalePrice_hat_rf) %>%
+  select(Id, SalePrice)
+write_csv(submission_rf, "submission_rf.csv")
 ```
 
 
-![](images/score_screenshot_naive.png){ width=100% }
+![](images/screenshot_rf.png){ width=100% }
 
